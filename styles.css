@@ -1,0 +1,118 @@
+.oclaw-html-btn {
+  border: 1px solid #16a34a;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #16a34a;
+  font-size: 13px;
+  line-height: 1;
+  padding: 8px 10px;
+  margin-left: 8px;
+  cursor: pointer;
+}
+
+.oclaw-html-btn:hover {
+  background: #f0fdf4;
+}
+
+.oclaw-float-wrap {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 2147483647;
+}
+
+.oclaw-float-wrap .oclaw-html-btn {
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.12);
+  margin-left: 0;
+  padding: 10px 12px;
+}
+
+.oclaw-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  z-index: 2147483647;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.oclaw-modal.show {
+  display: flex;
+}
+
+.oclaw-panel {
+  width: min(860px, 96vw);
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25);
+}
+
+.oclaw-title {
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #111827;
+}
+
+#oclaw-html-source-textarea {
+  width: 100%;
+  min-height: 330px;
+  resize: vertical;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+#oclaw-html-source-textarea:focus {
+  outline: none;
+  border-color: #16a34a;
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+}
+
+.oclaw-msg {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #0f766e;
+  min-height: 17px;
+}
+
+.oclaw-msg.error {
+  color: #b91c1c;
+}
+
+.oclaw-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.oclaw-actions button {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  border-radius: 4px;
+  padding: 7px 10px;
+  color: #111827;
+  cursor: pointer;
+}
+
+.oclaw-actions button:hover {
+  background: #f3f4f6;
+}
+
+.oclaw-actions button.primary {
+  background: #16a34a;
+  color: #ffffff;
+  border-color: #16a34a;
+}
+
+.oclaw-actions button.primary:hover {
+  background: #15803d;
+}
