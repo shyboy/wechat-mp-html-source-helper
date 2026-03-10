@@ -87,8 +87,27 @@
   color: #b91c1c;
 }
 
-.oclaw-actions {
+.oclaw-footer {
   margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.oclaw-site-link {
+  color: #6b7280;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.oclaw-site-link:hover {
+  color: #16a34a;
+  text-decoration: underline;
+}
+
+.oclaw-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;

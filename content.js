@@ -169,10 +169,13 @@
         <div class="oclaw-title">HTML 源码导入</div>
         <textarea id="${IDS.textarea}" placeholder="在这里粘贴 HTML 源码..."></textarea>
         <div id="${IDS.msg}" class="oclaw-msg">把 HTML 粘贴进来后点击“导入并预览”。</div>
-        <div class="oclaw-actions">
+        <div class="oclaw-footer">
+          <a class="oclaw-site-link" href="https://dreamger.com" target="_blank" rel="noopener noreferrer">dreamger.com</a>
+          <div class="oclaw-actions">
           <button id="${IDS.readBtn}" type="button">读取当前 HTML</button>
           <button id="${IDS.cancelBtn}" type="button">取消</button>
           <button id="${IDS.applyBtn}" type="button" class="primary">导入并预览</button>
+          </div>
         </div>
       </div>
     `;
