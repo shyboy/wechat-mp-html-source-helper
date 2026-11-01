@@ -1,7 +1,7 @@
 ﻿{
   "manifest_version": 3,
   "name": "WeChat MP HTML Source Helper",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "为微信公众号后台编辑器提供 HTML 源码导入与读取能力。",
   "content_scripts": [
     {
