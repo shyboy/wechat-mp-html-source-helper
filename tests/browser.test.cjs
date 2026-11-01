@@ -95,13 +95,57 @@ test('unrelated, ambiguous and hidden editables are not overwritten', async (t) 
   }
 });
 
-test('ProseMirror permits reading but blocks direct DOM replacement', async (t) => {
+test('ProseMirror class does not block reading, import or restore', async (t) => {
   const page = await fixture(t, '<div class="js_editor_area"><div class="ProseMirror" contenteditable="true"><p>事务正文</p></div></div>');
   await page.locator('#oclaw-html-source-read-btn').click();
   assert.equal(await page.locator('textarea').inputValue(), '<p>事务正文</p>');
-  assert.deepEqual(await apply(page, '<p>新正文</p>'), []);
+  assert.equal((await apply(page, '<p>新正文</p>')).length, 1);
+  assert.equal(await page.locator('.ProseMirror').innerText(), '新正文');
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.locator('#oclaw-html-source-restore-btn').click();
   assert.equal(await page.locator('.ProseMirror').innerText(), '事务正文');
-  assert.match(await page.locator('[role="status"]').innerText(), /ProseMirror/);
+});
+
+test('real ProseMirror observes imported DOM in its document model and restores it', async (t) => {
+  const esbuild = require(process.env.ESBUILD_MODULE || 'esbuild');
+  const bundle = await esbuild.build({
+    stdin: {
+      resolveDir: process.env.PROSEMIRROR_PROJECT || path.join(__dirname, '..'),
+      contents: `
+        import { Schema } from 'prosemirror-model';
+        import { EditorState } from 'prosemirror-state';
+        import { EditorView } from 'prosemirror-view';
+        const schema = new Schema({ nodes: {
+          doc: {content: 'paragraph+'},
+          paragraph: {content: 'text*', parseDOM: [{tag: 'p'}], toDOM: () => ['p', 0]},
+          text: {}
+        }});
+        window.view = new EditorView(document.querySelector('.js_editor_area'), {
+          state: EditorState.create({schema, doc: schema.node('doc', null, [schema.node('paragraph', null, [schema.text('真实模型原正文')])])})
+        });
+        window.reopen = (json) => {
+          window.view.destroy();
+          window.view = new EditorView(document.querySelector('.js_editor_area'), {
+            state: EditorState.create({schema, doc: schema.nodeFromJSON(json)})
+          });
+        };
+      `,
+    },
+    bundle: true, write: false, format: 'iife', platform: 'browser',
+  });
+  const page = await fixture(t, '<div class="js_editor_area"></div>');
+  await page.addScriptTag({ content: bundle.outputFiles[0].text });
+  await apply(page, '<p>真实模型新正文</p>');
+  await page.waitForFunction(() => window.view.state.doc.textContent === '真实模型新正文');
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.locator('#oclaw-html-source-restore-btn').click();
+  await page.waitForFunction(() => window.view.state.doc.textContent === '真实模型原正文');
+  await apply(page, '<p>保存后重开</p>');
+  await page.waitForFunction(() => window.view.state.doc.textContent === '保存后重开');
+  const saved = await page.evaluate(() => window.view.state.doc.toJSON());
+  await page.evaluate((json) => window.reopen(json), saved);
+  assert.equal(await page.locator('.ProseMirror').innerText(), '保存后重开');
+  assert.equal(await page.evaluate(() => window.view.state.doc.textContent), '保存后重开');
 });
 
 test('a changed page address cannot restore the previous article backup', async (t) => {

@@ -14,7 +14,7 @@
 - 阻止空内容覆盖；每次覆盖前提示，当前页面可恢复最近一次导入前的正文
 - 提示样式表移除、非微信图片地址和复杂布局的兼容风险
 - 保留常见 SVG 图形和 SMIL 视觉动画，包括 `begin="click"`
-- 仅在唯一识别到正文时允许写入；ProseMirror 编辑器可读取，暂不直接覆盖
+- 仅在唯一识别到正文时允许写入；不再因 ProseMirror 类名阻止导入
 
 ## 适用范围
 
@@ -52,7 +52,7 @@
 
 备份仅保存在当前页面内存中，不写入本地存储或上传。只保留最近一次导入前的内容，刷新/关闭页面后失效。恢复操作会核对编辑区节点和页面地址；不要将它当作跨文章历史记录。
 
-如果提示 ProseMirror 编辑器，请使用微信原生富文本粘贴入口。扩展暂时阻止直接修改其 DOM，因为这种写法可能绕过编辑器事务和保存机制；这不是已完成的新版编辑器写入适配。
+0.2.1 已移除 0.2.0 新增的 ProseMirror 导入拦截，恢复原来的正文写入路径，同时保留备份恢复等保护。ProseMirror 可以通过 DOM 变化监听同步正文；不能仅凭编辑器名称判断导入必然失效。实际微信的结构过滤和服务器保存结果仍需保存草稿后核对。
 
 ## 安全说明
 
@@ -80,7 +80,7 @@
 - 工具栏 DOM 结构如果发生变化，按钮可能无法插入原位置；此时会回退到悬浮按钮
 - 扩展仅在 `https://mp.weixin.qq.com/*` 范围内生效
 - 当前版本不提供持久历史记录、模板管理或导出功能
-- 暂不支持直接覆盖 ProseMirror 正文；无法唯一识别正文或识别到隐藏编辑区时拒绝写入
+- 无法唯一识别正文或识别到隐藏编辑区时拒绝写入
 - 当前测试覆盖 Chromium 中的模拟编辑页，未完成真实微信公众号账号下的保存、重新打开及 iOS/Android 预览验收
 
 ## 项目结构
@@ -111,11 +111,17 @@
 运行时不需要任何依赖。测试使用 Node.js 内置测试运行器和开发用 `playwright-core`，需要 Node.js 20+ 与已安装的 Chrome：
 
 ```powershell
-npm install --no-save --package-lock=false playwright-core
+npm install --no-save --package-lock=false playwright-core esbuild prosemirror-model prosemirror-state prosemirror-view
 node --test tests/browser.test.cjs
 ```
 
-也可通过 `PLAYWRIGHT_MODULE` 指向已安装的 Playwright 模块目录，`CHROME_PATH` 指向 Chromium/Chrome 可执行文件，复用现有环境。测试覆盖空内容、取消覆盖、备份恢复与跨编辑区拦截、编辑器识别、URL/SVG 清洗、兼容提示、iframe 事件以及键盘焦点。
+也可通过 `PLAYWRIGHT_MODULE` 指向已安装的 Playwright 模块目录，`CHROME_PATH` 指向 Chromium/Chrome 可执行文件，复用现有环境。`ESBUILD_MODULE` 可指定已有 esbuild 模块目录，`PROSEMIRROR_PROJECT` 可指定已安装 ProseMirror 的项目目录。以上依赖仅用于开发测试，不随扩展加载。
+
+测试覆盖空内容、取消覆盖、备份恢复与跨编辑区拦截、编辑器识别、URL/SVG 清洗、兼容提示、iframe 事件以及键盘焦点。另使用真实 ProseMirror 验证导入/恢复后的正文数据模型，以及模型序列化后重建编辑器；该检查不等于微信服务器保存验收。
+
+### 0.2.1（2026-11-01）
+
+修复 0.2.0 一刀切拦截 ProseMirror 导入造成的功能回退，保留空内容拦截、覆盖提醒及恢复功能。Chromium 14/14 检查通过，其中包含真实 ProseMirror 1.42.6 的正文模型同步、恢复及序列化后重建测试。真实微信服务器保存与手机端预览未实测。
 
 ### 0.2.0（2026-11-01）
 

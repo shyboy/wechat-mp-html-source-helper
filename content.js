@@ -168,11 +168,6 @@
       setMessage("没有可导入的内容，已阻止清空正文。", true);
       return false;
     }
-    // Direct DOM writes bypass ProseMirror's transaction history and may not save.
-    if (editor.node.matches(".ProseMirror") || editor.node.closest(".ProseMirror")) {
-      setMessage("检测到 ProseMirror 编辑器，暂不直接覆盖。请使用微信原生粘贴入口导入；未修改内容。", true);
-      return false;
-    }
     const warnings = result.warnings.join("\n");
     if (!window.confirm(`${warnings ? warnings + "\n\n" : ""}将替换当前正文。导入前的内容仅保留在本页内存中，可恢复一次；刷新页面后失效。是否继续？`)) {
       return false;
