@@ -96,6 +96,8 @@
 `-- README.md
 ```
 
+`icons/` 包含可编辑 SVG 源文件及 16、32、48、128 像素 PNG 扩展图标，采用绿色底与白色源码符号。
+
 ## 开发
 
 这是一个 Manifest V3 扩展，当前通过 `content_scripts` 注入脚本和样式，不依赖构建工具或第三方包。
@@ -118,6 +120,10 @@ node --test tests/browser.test.cjs
 也可通过 `PLAYWRIGHT_MODULE` 指向已安装的 Playwright 模块目录，`CHROME_PATH` 指向 Chromium/Chrome 可执行文件，复用现有环境。`ESBUILD_MODULE` 可指定已有 esbuild 模块目录，`PROSEMIRROR_PROJECT` 可指定已安装 ProseMirror 的项目目录。以上依赖仅用于开发测试，不随扩展加载。
 
 测试覆盖空内容、取消覆盖、备份恢复与跨编辑区拦截、编辑器识别、URL/SVG 清洗、兼容提示、iframe 事件以及键盘焦点。另使用真实 ProseMirror 验证导入/恢复后的正文数据模型，以及模型序列化后重建编辑器；该检查不等于微信服务器保存验收。
+
+### 0.2.2（2026-11-01）
+
+补齐扩展图标及四种尺寸，配置到 Manifest；导入逻辑不变。更新后在扩展管理页重新加载即可生效。
 
 ### 0.2.1（2026-11-01）
 
