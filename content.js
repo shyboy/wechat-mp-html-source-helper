@@ -16,7 +16,15 @@
   let backup = null;
   let returnFocus = null;
   let insertionPoint = null;
+  let confirmedEditor = null;
   const watchedDocuments = new WeakSet();
+
+  function confirmFirstOperation(editor, message) {
+    if (confirmedEditor?.node === editor.node && confirmedEditor.url === location.href) return true;
+    if (!window.confirm(message + "\n本页当前文章仅首次操作提示，后续插入、替换全文和恢复不再弹窗。")) return false;
+    confirmedEditor = { node: editor.node, url: location.href };
+    return true;
+  }
 
   function rememberInsertionPoint() {
     if (document.getElementById(IDS.modal)?.classList.contains("show")) return;
@@ -211,7 +219,7 @@
       return false;
     }
     const warnings = result.warnings.join("\n");
-    if (!window.confirm(`${warnings ? warnings + "\n\n" : ""}${insert ? "将在记住的光标处插入；已选文字不会删除。" : "将替换当前正文。"}操作前的内容仅保留在本页内存中，可恢复一次；刷新页面后失效。是否继续？`)) {
+    if (!confirmFirstOperation(editor, `${warnings ? warnings + "\n\n" : ""}${insert ? "将在记住的光标处插入；已选文字不会删除。" : "将替换当前正文。"}操作前的内容仅保留在本页内存中，可恢复一次；刷新页面后失效。替换全文或恢复也会覆盖正文。是否继续？`)) {
       return false;
     }
     backup = { node: editor.node, html: editor.node.innerHTML, url: location.href };
@@ -268,7 +276,7 @@
       setMessage("备份不属于当前正文，无法恢复。请返回导入时的文章。", true);
       return;
     }
-    if (!window.confirm("恢复将替换当前正文，包括导入后手动编辑的内容。是否继续？")) return;
+    if (!confirmFirstOperation(editor, "恢复将替换当前正文，包括导入后手动编辑的内容。是否继续？")) return;
     editor.node.innerHTML = backup.html;
     insertionPoint = null;
     emitEditorEvents(editor.node);
@@ -338,6 +346,10 @@
     const cancelBtn = document.getElementById(IDS.cancelBtn);
     const applyBtn = document.getElementById(IDS.applyBtn);
     const textarea = document.getElementById(IDS.textarea);
+    textarea.addEventListener("input", () => {
+      const warnings = sanitizeHtml(textarea.value).warnings;
+      setMessage(warnings.length ? warnings.join("\n") : "插入保留原文；替换全文或恢复会覆盖正文。本页当前文章仅首次确认，不会自动保存或发布。");
+    });
     document.getElementById(IDS.restoreBtn).addEventListener("click", restoreHtml);
     document.getElementById(IDS.insertBtn).addEventListener("click", () => applyHtmlToEditor(textarea.value, true));
 
