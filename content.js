@@ -9,11 +9,44 @@
     msg: "oclaw-html-source-message",
     readBtn: "oclaw-html-source-read-btn",
     applyBtn: "oclaw-html-source-apply-btn",
+    insertBtn: "oclaw-html-source-insert-btn",
     cancelBtn: "oclaw-html-source-cancel-btn",
     restoreBtn: "oclaw-html-source-restore-btn"
   };
   let backup = null;
   let returnFocus = null;
+  let insertionPoint = null;
+  const watchedDocuments = new WeakSet();
+
+  function rememberInsertionPoint() {
+    if (document.getElementById(IDS.modal)?.classList.contains("show")) return;
+    if (document.activeElement?.id === IDS.button) return;
+    const editor = findEditorTarget();
+    const selection = editor?.doc.getSelection();
+    if (!editor || !selection?.rangeCount ||
+        (editor.doc === document && !editor.node.contains(document.activeElement)) ||
+        (editor.doc !== document && document.activeElement !== editor.doc.defaultView.frameElement)) {
+      insertionPoint = null;
+      return;
+    }
+    const range = selection.getRangeAt(0).cloneRange();
+    if (!editor.node.contains(range.startContainer) || !editor.node.contains(range.endContainer)) {
+      insertionPoint = null;
+      return;
+    }
+    // Insert after a selection; never delete the selected article text.
+    range.collapse(false);
+    insertionPoint = { node: editor.node, range, anchor: range.startContainer,
+      offset: range.startOffset, html: editor.node.innerHTML, url: location.href };
+  }
+
+  function watchSelection() {
+    const doc = findEditorTarget()?.doc;
+    if (doc && !watchedDocuments.has(doc)) {
+      watchedDocuments.add(doc);
+      doc.addEventListener("selectionchange", rememberInsertionPoint);
+    }
+  }
 
   function isVisible(el) {
     if (!el) {
@@ -155,10 +188,19 @@
     return editor.node.innerHTML;
   }
 
-  function applyHtmlToEditor(rawHtml) {
+  function applyHtmlToEditor(rawHtml, insert = false) {
     const editor = findEditorTarget();
     if (!editor) {
       setMessage("无法唯一确定正文编辑区，请进入图文编辑页并只保留一个正文编辑区。未修改内容。", true);
+      return false;
+    }
+
+    const point = insertionPoint;
+    if (insert && (!point || point.node !== editor.node || point.url !== location.href ||
+        !point.anchor.isConnected || !editor.node.contains(point.anchor) ||
+        point.html !== editor.node.innerHTML || point.range.startContainer !== point.anchor ||
+        point.range.startOffset !== point.offset)) {
+      setMessage("插入位置已失效或尚未定位。请关闭弹窗，在正文中重新点选位置，再打开 HTML 源码。未修改内容。", true);
       return false;
     }
 
@@ -169,12 +211,48 @@
       return false;
     }
     const warnings = result.warnings.join("\n");
-    if (!window.confirm(`${warnings ? warnings + "\n\n" : ""}将替换当前正文。导入前的内容仅保留在本页内存中，可恢复一次；刷新页面后失效。是否继续？`)) {
+    if (!window.confirm(`${warnings ? warnings + "\n\n" : ""}${insert ? "将在记住的光标处插入；已选文字不会删除。" : "将替换当前正文。"}操作前的内容仅保留在本页内存中，可恢复一次；刷新页面后失效。是否继续？`)) {
       return false;
     }
     backup = { node: editor.node, html: editor.node.innerHTML, url: location.href };
     document.getElementById(IDS.restoreBtn).disabled = false;
-    editor.node.innerHTML = result.html;
+    if (insert) {
+      const range = point.range.cloneRange();
+      const fragment = range.createContextualFragment(result.html);
+      const last = fragment.lastChild;
+      const element = range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentElement;
+      let paragraph = element.closest("p,h1,h2,h3,h4,h5,h6,pre");
+      if (!paragraph) {
+        let inline = element;
+        while (inline !== editor.node && inline.matches("span,a,b,strong,i,em,u,s,del,code,sub,sup")) {
+          paragraph = inline;
+          inline = inline.parentElement;
+        }
+      }
+      const blockContent = parsed.body.querySelector("svg,p,section,div,h1,h2,h3,h4,h5,h6,ul,ol,li,table,blockquote,pre,hr");
+      if (blockContent && paragraph && paragraph !== editor.node && editor.node.contains(paragraph)) {
+        // Split the enclosing paragraph so SVG/blocks are not nested inside it.
+        const tail = editor.doc.createRange();
+        tail.selectNodeContents(paragraph);
+        tail.setStart(range.startContainer, range.startOffset);
+        const following = paragraph.cloneNode(false);
+        following.removeAttribute("id");
+        following.appendChild(tail.extractContents());
+        paragraph.after(fragment, following);
+      } else {
+        range.insertNode(fragment);
+      }
+      closeModal(false);
+      editor.node.focus();
+      range.setStartAfter(last);
+      range.collapse(true);
+      const selection = editor.doc.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+    } else {
+      editor.node.innerHTML = result.html;
+    }
+    insertionPoint = null;
     emitEditorEvents(editor.node);
     if (editor.doc && editor.doc !== document) {
       emitEditorEvents(editor.doc);
@@ -192,6 +270,7 @@
     }
     if (!window.confirm("恢复将替换当前正文，包括导入后手动编辑的内容。是否继续？")) return;
     editor.node.innerHTML = backup.html;
+    insertionPoint = null;
     emitEditorEvents(editor.node);
     if (editor.doc !== document) emitEditorEvents(editor.doc);
     backup = null;
@@ -199,11 +278,11 @@
     setMessage("已恢复本次导入前的正文。请检查并保存草稿。");
   }
 
-  function closeModal() {
+  function closeModal(restoreFocus = true) {
     const modal = document.getElementById(IDS.modal);
     if (modal) {
       modal.classList.remove("show");
-      if (returnFocus?.isConnected) returnFocus.focus();
+      if (restoreFocus && returnFocus?.isConnected) returnFocus.focus();
     }
   }
 
@@ -216,7 +295,7 @@
     }
 
     returnFocus = document.activeElement;
-    setMessage("把 HTML 粘贴进来后点击“导入正文”。此操作会替换全文，不会自动保存或发布。");
+    setMessage(insertionPoint ? "已记住正文位置。粘贴 HTML / SVG 后可插入；选中文字会保留。替换全文需另点对应按钮。" : "先在正文点选位置，再打开此窗口，即可插入 HTML / SVG。也可选择替换全文。不会自动保存或发布。");
     modal.classList.add("show");
     textarea.focus();
   }
@@ -238,9 +317,10 @@
           <a class="oclaw-site-link" href="https://dreamger.com" target="_blank" rel="noopener noreferrer">dreamger.com</a>
           <div class="oclaw-actions">
           <button id="${IDS.readBtn}" type="button">读取当前 HTML</button>
-          <button id="${IDS.restoreBtn}" type="button" disabled>恢复导入前正文</button>
+          <button id="${IDS.restoreBtn}" type="button" disabled>恢复操作前正文</button>
           <button id="${IDS.cancelBtn}" type="button">取消</button>
-          <button id="${IDS.applyBtn}" type="button" class="primary">导入正文</button>
+          <button id="${IDS.applyBtn}" type="button">替换全文</button>
+          <button id="${IDS.insertBtn}" type="button" class="primary">插入到光标位置</button>
           </div>
         </div>
       </div>
@@ -259,6 +339,7 @@
     const applyBtn = document.getElementById(IDS.applyBtn);
     const textarea = document.getElementById(IDS.textarea);
     document.getElementById(IDS.restoreBtn).addEventListener("click", restoreHtml);
+    document.getElementById(IDS.insertBtn).addEventListener("click", () => applyHtmlToEditor(textarea.value, true));
 
     if (readBtn && textarea) {
       readBtn.addEventListener("click", () => {
@@ -311,12 +392,17 @@
     btn.className = "oclaw-html-btn";
     btn.type = "button";
     btn.textContent = "HTML 源码";
-    btn.title = "读取或替换公众号正文 HTML";
+    btn.title = "插入 HTML / SVG、读取或替换公众号正文";
+    btn.addEventListener("pointerdown", (event) => {
+      rememberInsertionPoint();
+      event.preventDefault();
+    });
     btn.addEventListener("click", openModal);
     return btn;
   }
 
   function mountButton() {
+    watchSelection();
     const toolbar = findToolbar();
     const existing = document.getElementById(IDS.button);
     if (existing && (!toolbar || existing.parentElement === toolbar)) return;
@@ -344,6 +430,8 @@
   function boot() {
     ensureModal();
     mountButton();
+    document.addEventListener("selectionchange", rememberInsertionPoint);
+    document.addEventListener("load", watchSelection, true);
 
     const observer = new MutationObserver(() => {
       mountButton();
