@@ -35,11 +35,15 @@
 
 当前项目以本地加载扩展的方式使用：
 
+先在仓库页面点击 `Code → Download ZIP` 并解压，或使用 `git clone https://github.com/shyboy/wechat-mp-html-source-helper.git` 获取代码。
+
 1. 打开 Chrome，进入 `chrome://extensions/`
 2. 打开右上角的 `开发者模式`
 3. 点击 `加载已解压的扩展程序`
-4. 选择目录 `wechat-html-source-extension`
+4. 选择直接包含 `manifest.json` 的仓库根目录：下载 main 分支 ZIP 后通常为 `wechat-mp-html-source-helper-main`，默认克隆后为 `wechat-mp-html-source-helper`
 5. 打开微信公众号后台图文编辑页面进行验证
+
+文件夹可以改名，以其中直接包含 `manifest.json`、`content.js` 和 `styles.css` 为准；不要选择 ZIP 文件或它们的上一级目录。
 
 ## 使用方法
 
