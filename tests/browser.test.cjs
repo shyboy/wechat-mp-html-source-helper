@@ -74,10 +74,6 @@ test('cancel preserves content; confirmed import and restore notify the editor',
   await apply(page, '<p>新正文</p>');
   assert.equal(await page.locator('[contenteditable]').innerText(), '新正文');
   assert.match(await page.locator('[role="status"]').innerText(), /尚未验证微信保存/);
-  page.once('dialog', (dialog) => dialog.dismiss());
-  await page.locator('#oclaw-html-source-restore-btn').click();
-  assert.equal(await page.locator('[contenteditable]').innerText(), '新正文');
-  page.once('dialog', (dialog) => dialog.accept());
   await page.locator('#oclaw-html-source-restore-btn').click();
   assert.equal(await page.locator('[contenteditable]').innerText(), '原正文');
   assert.equal(await page.evaluate(() => window.inputs), 2);
@@ -116,7 +112,6 @@ test('ProseMirror class does not block reading, import or restore', async (t) =>
   assert.equal(await page.locator('textarea').inputValue(), '<p>事务正文</p>');
   assert.equal((await apply(page, '<p>新正文</p>')).length, 1);
   assert.equal(await page.locator('.ProseMirror').innerText(), '新正文');
-  page.once('dialog', (dialog) => dialog.accept());
   await page.locator('#oclaw-html-source-restore-btn').click();
   assert.equal(await page.locator('.ProseMirror').innerText(), '事务正文');
 });
@@ -159,7 +154,6 @@ test('real ProseMirror observes imported DOM in its document model and restores 
   await mountProseMirror(page);
   await apply(page, '<p>真实模型新正文</p>');
   await page.waitForFunction(() => window.view.state.doc.textContent === '真实模型新正文');
-  page.once('dialog', (dialog) => dialog.accept());
   await page.locator('#oclaw-html-source-restore-btn').click();
   await page.waitForFunction(() => window.view.state.doc.textContent === '真实模型原正文');
   await apply(page, '<p>保存后重开</p>');
@@ -231,7 +225,6 @@ test('visible editable UEditor iframe imports and restores using frame events', 
   const page = await fixture(t, '<iframe id="ueditor_0" style="width:600px;height:200px" srcdoc="<body contenteditable=\'true\'><p>旧框架正文</p></body>"></iframe>');
   await apply(page, '<p>框架新正文</p>');
   assert.equal(await page.frameLocator('iframe').locator('body').innerText(), '框架新正文');
-  page.once('dialog', (dialog) => dialog.accept());
   await page.locator('#oclaw-html-source-restore-btn').click();
   assert.equal(await page.frameLocator('iframe').locator('body').innerText(), '旧框架正文');
 });
@@ -287,7 +280,6 @@ test('SVG splits the paragraph at the remembered caret and preserves surrounding
   assert.equal(await editor.locator('animate').getAttribute('begin'), 'click');
   assert.equal(await page.locator('.oclaw-modal').isVisible(), false);
   await page.locator('#oclaw-html-source-button').click();
-  page.once('dialog', (dialog) => dialog.accept());
   await page.locator('#oclaw-html-source-restore-btn').click();
   assert.equal(await editor.innerHTML(), '<p id="before">前一段</p><p id="target">甲乙丙丁</p><p id="after">后一段</p>');
 });
@@ -347,14 +339,12 @@ test('an unrelated input does not reuse the old article caret', async (t) => {
   assert.equal(await page.locator('[contenteditable]').innerHTML(), '<p>正文</p>');
 });
 
-test('cancelled or empty insertion preserves content and an existing backup', async (t) => {
+test('empty insertion preserves content and an existing backup', async (t) => {
   const page = await fixture(t);
   await apply(page, '<p>替换后的正文</p>');
   await position(page, '[contenteditable] p', 2);
   assert.deepEqual(await apply(page, '<script>alert(1)</script>', true, true), []);
-  await apply(page, '<span>新增</span>', false, true);
   assert.equal(await page.locator('[contenteditable]').innerHTML(), '<p>替换后的正文</p>');
-  page.once('dialog', (dialog) => dialog.accept());
   await page.locator('#oclaw-html-source-restore-btn').click();
   assert.equal(await page.locator('[contenteditable]').innerHTML(), '<p>原正文</p>');
 });
@@ -407,4 +397,56 @@ test('insertion sanitizes unsafe HTML while preserving original content and SVG 
   assert.equal(await page.locator('[contenteditable]').textContent(), '原新增正文');
   assert.doesNotMatch(await page.locator('[contenteditable]').innerHTML(), /<script|onclick|javascript:/);
   assert.equal(await page.locator('[contenteditable] animate').getAttribute('begin'), 'click');
+});
+
+test('one accepted confirmation covers repeated insertions, replacements and restore', async (t) => {
+  const page = await fixture(t);
+  assert.equal((await apply(page, '<p>第一稿</p>')).length, 1);
+  assert.deepEqual(await apply(page, '<p>第二稿</p>'), []);
+  await position(page, '[contenteditable] p', 1);
+  assert.deepEqual(await apply(page, '<span>插入</span>', true, true), []);
+  await page.locator('#oclaw-html-source-button').click();
+  const dialogs = [];
+  const handler = async dialog => { dialogs.push(dialog.message()); await dialog.accept(); };
+  page.on('dialog', handler);
+  await page.locator('#oclaw-html-source-restore-btn').click();
+  page.off('dialog', handler);
+  assert.deepEqual(dialogs, []);
+  assert.equal(await page.locator('[contenteditable]').innerHTML(), '<p>第二稿</p>');
+});
+
+test('cancel is not remembered as consent for subsequent insertion', async (t) => {
+  const page = await fixture(t);
+  await position(page, '[contenteditable] p', 1);
+  assert.equal((await apply(page, '<span>新增</span>', false, true)).length, 1);
+  assert.equal(await page.locator('[contenteditable]').innerHTML(), '<p>原正文</p>');
+  assert.equal((await apply(page, '<span>新增</span>', true, true)).length, 1);
+  assert.equal(await page.locator('[contenteditable]').innerHTML(), '<p>原<span>新增</span>正文</p>');
+  await page.locator('#oclaw-html-source-button').click();
+  await position(page, '[contenteditable] p', 0);
+  assert.deepEqual(await apply(page, '<span>再次</span>', true, true), []);
+  assert.equal(await page.locator('[contenteditable]').textContent(), '再次原新增正文');
+});
+
+test('changing the article address or editor node asks again', async (t) => {
+  const page = await fixture(t);
+  assert.equal((await apply(page, '<p>第一篇</p>')).length, 1);
+  await page.evaluate(() => { location.hash = 'new-article'; });
+  assert.equal((await apply(page, '<p>第二篇</p>')).length, 1);
+  await page.evaluate(() => { document.querySelector('.js_editor_area').innerHTML = '<div contenteditable="true"><p>第三篇</p></div>'; });
+  assert.equal((await apply(page, '<p>第三篇修改</p>')).length, 1);
+});
+
+test('a page reload resets confirmation and compatibility warnings remain inline', async (t) => {
+  const page = await fixture(t);
+  assert.equal((await apply(page, '<p>初稿</p>')).length, 1);
+  await page.locator('textarea').fill('<p onclick="alert(1)">下一稿</p>');
+  assert.match(await page.locator('[role="status"]').innerText(), /已移除/);
+  assert.deepEqual(await apply(page, '<p onclick="alert(1)">下一稿</p>'), []);
+  assert.equal(await page.locator('[contenteditable]').innerHTML(), '<p>下一稿</p>');
+  await page.reload();
+  await page.setContent('<div class="js_editor_area"><div contenteditable="true"><p>重开</p></div></div>');
+  await page.addScriptTag({ path: path.join(__dirname, '../content.js') });
+  await page.locator('#oclaw-html-source-button').click();
+  assert.equal((await apply(page, '<p>刷新后</p>')).length, 1);
 });
