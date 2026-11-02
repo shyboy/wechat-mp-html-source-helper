@@ -2,6 +2,10 @@
 
 `WeChat MP HTML Source Helper` 是一个面向微信公众号后台编辑器的 Chrome 扩展，用来辅助导入和读取正文区域中的 HTML 内容。
 
+**[下载最新版安装包](https://github.com/shyboy/wechat-mp-html-source-helper/releases/latest/download/wechat-mp-html-source-helper.zip)** · [查看安装步骤](#安装) · [版本更新记录](https://github.com/shyboy/wechat-mp-html-source-helper/releases)
+
+不需要会编程，也不需要安装 Node.js。下载 ZIP 后解压，在 Chrome 中加载即可使用。
+
 扩展会在 `https://mp.weixin.qq.com/` 的图文编辑页面注入一个 `HTML 源码` 入口；当工具栏无法挂载时，会自动降级为页面右下角的悬浮按钮。
 
 ## 功能
@@ -33,17 +37,65 @@
 
 ## 安装
 
-当前项目以本地加载扩展的方式使用：
+下面以 Windows 电脑上的 Chrome 浏览器为例。
 
-先在仓库页面点击 `Code → Download ZIP` 并解压，或使用 `git clone https://github.com/shyboy/wechat-mp-html-source-helper.git` 获取代码。
+### 第 1 步：下载安装包
 
-1. 打开 Chrome，进入 `chrome://extensions/`
-2. 打开右上角的 `开发者模式`
-3. 点击 `加载已解压的扩展程序`
-4. 选择直接包含 `manifest.json` 的仓库根目录：下载 main 分支 ZIP 后通常为 `wechat-mp-html-source-helper-main`，默认克隆后为 `wechat-mp-html-source-helper`
-5. 打开微信公众号后台图文编辑页面进行验证
+点击 **[下载最新版安装包](https://github.com/shyboy/wechat-mp-html-source-helper/releases/latest/download/wechat-mp-html-source-helper.zip)**，保存 `wechat-mp-html-source-helper.zip`。
 
-文件夹可以改名，以其中直接包含 `manifest.json`、`content.js` 和 `styles.css` 为准；不要选择 ZIP 文件或它们的上一级目录。
+如果打开的是 [Release 页面](https://github.com/shyboy/wechat-mp-html-source-helper/releases/latest)，在页面下方的 **Assets** 中点击同名 ZIP 即可。`Source code (zip)` 和 `Source code (tar.gz)` 是给开发者用的源码包，本教程使用上面的安装包。
+
+### 第 2 步：解压到固定文件夹
+
+在下载的 ZIP 上点击鼠标右键，选择 **全部解压**（或 **解压到同名文件夹**）。建议把解压后的文件夹放到“文档”等固定位置，安装后保留这个文件夹。
+
+打开解压后的 `wechat-mp-html-source-helper` 文件夹，里面应直接看到：
+
+```text
+wechat-mp-html-source-helper
+├── manifest.json
+├── content.js
+├── styles.css
+├── icons
+├── README.md
+└── LICENSE
+```
+
+安装时选择的就是这个文件夹。不要选择 ZIP 文件，也不要选择它的上一级目录。
+
+### 第 3 步：打开 Chrome 的扩展管理页
+
+复制 `chrome://extensions/`，粘贴到 Chrome 顶部地址栏，按回车。
+
+打开页面右上角的 **开发者模式**，页面上会出现 **加载已解压的扩展程序** 按钮。
+
+### 第 4 步：加载刚才解压的文件夹
+
+点击 **加载已解压的扩展程序**，找到第 2 步的文件夹，选中它，再点击 **选择文件夹**。
+
+页面出现 **WeChat MP HTML Source Helper** 扩展卡片和绿色 `</>` 图标，表示加载成功。安装包通过解压加载，不需要把 ZIP 拖进浏览器。
+
+### 第 5 步：回到公众号写文章
+
+打开微信公众号后台，进入一篇图文的正文编辑页面。如果页面已经打开，先刷新一次。
+
+找到工具栏中的 **HTML 源码** 按钮；有时它会显示在页面右下角。看到按钮就可以开始使用了。
+
+### 已经安装过，怎么更新？
+
+1. 先在公众号保存当前草稿，再下载上面的最新版安装包。
+2. 将新版解压到原来的扩展文件夹，遇到同名文件时选择替换。确保 `manifest.json` 仍直接位于原来的文件夹里。
+3. 打开 `chrome://extensions/`，找到本扩展，点击卡片上的 **重新加载**（圆形箭头）按钮。
+4. 刷新公众号正文编辑页面。当前安装包版本为 **0.3.2**，可在扩展管理页核对。
+
+### 遇到问题
+
+| 现象 | 怎么处理 |
+| --- | --- |
+| 找不到“加载已解压的扩展程序” | 先打开扩展管理页右上角的“开发者模式” |
+| 提示“清单文件缺失”或找不到 `manifest.json` | 文件夹选错了。打开所选文件夹，确认里面直接有 `manifest.json`；如果里面还有一层文件夹，就选择里面那一层 |
+| 安装成功，但公众号里没有按钮 | 进入图文的正文编辑页，并刷新页面；同时看看右下角是否有悬浮按钮 |
+| 更新后还是旧功能 | 扩展卡片点一次“重新加载”，公众号页面也要刷新；检查版本是否为0.3.2 |
 
 ## 使用方法
 
@@ -133,6 +185,10 @@ node --test tests/browser.test.cjs
 测试覆盖空内容、取消覆盖、备份恢复与跨编辑区拦截、编辑器识别、URL/SVG 清洗、兼容提示、iframe 事件以及键盘焦点。另使用真实 ProseMirror 验证导入/恢复后的正文数据模型，以及模型序列化后重建编辑器；该检查不等于微信服务器保存验收。
 
 插入回归覆盖光标与选区保留、段落/行内 HTML/空段落/首尾插入、富文本格式、失效位置与标题输入框隔离、iframe 内定位、取消操作和恢复。SVG 模型检查使用显式允许 SVG 的 ProseMirror 测试 schema，不代表微信接受任意 SVG 标签或属性。
+
+### 0.3.2（2026-11-02）
+
+提供 Release 安装 ZIP，解压后直接加载；README 增加一键下载入口、逐步安装、更新步骤和常见问题。正文编辑功能与0.3.1一致。
 
 ### 0.3.1（2026-11-02）
 
